@@ -42,6 +42,13 @@ class BuildConfiguration(ArgparseEnum):
     release = 'Release'
     debug = 'Debug'
 
+class PackageType(ArgparseEnum):
+    xcframework = 'XCFramework'
+    swiftpackage = 'Swift Package'
+    conan = 'Conan'
+    aar = 'Android Archive'
+    nuget = 'NuGet'
+
 
 class BuildContext:
     """Base class for all build contexts. Contains common code that is shared between builds for different
@@ -312,12 +319,21 @@ class WindowsBuildContext(BuildContext):
         """renders the doxygen documentation for C++/CLI"""
         BuildContext.render_doxygen_docs('Doxyfile-CppCli')
 
+class LinuxBuildContext(BuildContext):
+    def install(self):
+        for architecture in self.architectures:
+            self.conan_install(architecture=architecture)
+
+    def conan_create_all(self):
+        for architecture in self.architectures:
+            self.conan_create(architecture=architecture)
+
 
 class DjinniBuild:
 
     def __init__(self, working_directory: str, target: str, version: str, android_profile: str,
                  macos_profile: str, ios_profile: str,
-                 windows_profile: str, android_project_dir: str,
+                 windows_profile: str, linux_profile: str, android_project_dir: str,
                  android_module_dir: str, nupkg_dir: str, swiftpackage_dir: str):
         """
         :param working_directory:   Absolute path to the root directory of the Djinni project.
@@ -347,6 +363,7 @@ class DjinniBuild:
         self.macos_profile = macos_profile
         self.ios_profile = ios_profile
         self.windows_profile = windows_profile
+        self.linux_profile = linux_profile
         self.android_project_dir: str = android_project_dir
         self.android_module_dir: str = android_module_dir
         self.nupkg_dir = nupkg_dir
@@ -361,8 +378,6 @@ class DjinniBuild:
         parser.add_argument('--android', nargs='*', dest='android_architectures', type=Architecture.from_string,
                             choices=list(Architecture),
                             help="list of architectures that the library should be built for android")
-        parser.add_argument('--aar', action='store_const', const=True, dest='package_aar',
-                            help='wether to package the resulting binaries as AAR for Android')
         parser.add_argument('--macos', nargs='*', dest='macos_architectures', type=Architecture.from_string,
                             choices=list([Architecture.armv8, Architecture.x86_64]))
         parser.add_argument('--iphonesimulator', nargs='*', dest='iphonesimulator_architectures',
@@ -370,23 +385,22 @@ class DjinniBuild:
                             choices=list([Architecture.armv8, Architecture.x86_64]))
         parser.add_argument('--iphoneos', nargs='*', dest='iphoneos_architectures', type=Architecture.from_string,
                             choices=list([Architecture.armv8, Architecture.armv7]))
-        parser.add_argument('--xcframework', action='store_const', const=True, dest='xcframework',
-                            help='wether to package all macOS/iOS related binaries into an xcframework')
-        parser.add_argument('--swiftpackage', action='store_const', const=True, dest='swiftpackage',
-                            help='copy resulting xcframework into swiftpackage directory')
         parser.add_argument('--windows', nargs='*', dest='windows_architectures', type=Architecture.from_string,
                             choices=list(Architecture),
                             help='list of architectures to build for windows')
-        parser.add_argument('--nuget', action='store_const', const=True, dest='nuget',
-                            help='wether to package the resulting dlls as nuget for windows')
+        parser.add_argument('--linux', nargs='*', dest='linux_architectures', type=Architecture.from_string,
+                            choices=list(Architecture),
+                            help='list of architectures to build for linux')
         parser.add_argument('--build-directory', dest='build_directory', type=str, default="build")
         parser.add_argument('--android-ndk', dest='android_ndk', type=str, help='directory of the NDK installation')
         parser.add_argument('--java-8-home', dest='java_8_home', type=str,
                             help='JAVA_HOME for a Java 1.8 installation. Required if building for Android')
         parser.add_argument('--java-11-home', dest='java_11_home', type=str,
                             help='JAVA_HOME for a Java Version > 11. Required if building for Android')
-        parser.add_argument('--conan-create', action='store_const', const=True, dest='conan_create',
-                            help='create the conan package for the given configuration')
+        parser.add_argument('--package', nargs='*', dest='package_types', type=PackageType.from_string,
+                            choices=list(PackageType),
+                            help='which packages to create. Packages that cannot be created for the selected target '
+                                 'architectures will be ignored.')
         parser.add_argument('--render-docs', action='store_const', const=True, dest='render_docs',
                             help='render doxygen documentation for the languages of the selected target platforms')
 
@@ -403,7 +417,7 @@ class DjinniBuild:
             if not arguments.java_8_home:
                 missing_parameter = True
                 print(message_template.substitute(parameter='--java-8-home'), file=sys.stderr)
-            if not arguments.java_11_home and arguments.package_aar:
+            if not arguments.java_11_home and PackageType.aar in arguments.package_types:
                 missing_parameter = True
                 print(message_template.substitute(parameter='--java-11-home'), file=sys.stderr)
             if missing_parameter:
@@ -428,9 +442,9 @@ class DjinniBuild:
                 java_11_home=arguments.java_11_home)
             android.install()
             android.build()
-            if arguments.package_aar:
+            if PackageType.aar in arguments.package_types:
                 android.package()
-            if arguments.conan_create:
+            if PackageType.conan in arguments.package_types:
                 android.conan_create_all()
             if arguments.render_docs:
                 AndroidBuildContext.render_doxygen_docs()
@@ -478,7 +492,7 @@ class DjinniBuild:
         if arguments.iphoneos_architectures is not None:
             iphone.install()
             iphone.build()
-            if arguments.conan_create:
+            if PackageType.conan in arguments.package_types:
                 iphone.conan_create_all()
 
         if arguments.render_docs and (
@@ -487,12 +501,12 @@ class DjinniBuild:
                         arguments.iphoneos_architectures is not None)):
             DarwinBuildContext.render_doxygen_docs()
 
-        if arguments.xcframework:
+        if PackageType.xcframework in arguments.package_types:
             DarwinBuildContext.package(build_context_list=[iphonesimulator, iphone, macos],
                                        target=self.target,
                                        build_directory=arguments.build_directory)
 
-            if arguments.swiftpackage:
+            if PackageType.swiftpackage in arguments.package_types:
                 DarwinBuildContext.swiftpackage(self.swiftpackage_dir,
                                                 target=self.target,
                                                 build_directory=arguments.build_directory)
@@ -510,12 +524,28 @@ class DjinniBuild:
                 nupkg_dir=self.nupkg_dir)
             windows.install()
             windows.build()
-            if arguments.nuget:
+            if PackageType.nuget in arguments.package_types:
                 windows.package()
-            if arguments.conan_create:
+            if PackageType.conan in arguments.package_types:
                 windows.conan_create_all()
             if arguments.render_docs:
                 WindowsBuildContext.render_doxygen_docs()
+
+        if arguments.linux_architectures:
+            linux = LinuxBuildContext(
+                conan=conan,
+                working_directory=self.working_directory,
+                target=self.target,
+                version=self.version,
+                build_directory=f'{arguments.build_directory}/linux',
+                profile=self.linux_profile,
+                architectures=arguments.linux_architectures,
+                configuration=arguments.configuration,
+            )
+            linux.install()
+            linux.build()
+            if PackageType.conan in arguments.package_types:
+                linux.conan_create_all()
 
         if arguments.render_docs:
             BuildContext.render_doxygen_docs('Doxyfile-Cpp')

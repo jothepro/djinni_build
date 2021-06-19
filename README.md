@@ -18,12 +18,13 @@ It supports these platforms:
 - iOS (xcframework, Swiftpackage)
 - macOS (xcframework, Swiftpackage)
 - Windows (NuGet package)
+- Linux (just Conan)
 
 The script provides a CLI that allows the user to configure what the output should be.
 
 The user is able to configure:
 
-- What target platform to build for (Android, iOS, macOS, Windows)
+- What target platform to build for (Android, iOS, macOS, Windows, Linux)
 - Which architectures to build for (x86, x86_64, armv7, armv8)
 - Wether and how to package the resulting binaries (AAR, NuGet, XCFramework, Swift Package)
 - Wether to build documentation for the library interfaces in each target language (Java, Objective-C, C++/CLI)
@@ -66,6 +67,7 @@ djinniBuild = DjinniBuild(
     macos_profile=f'{workdir}/conan/profiles/macos',
     ios_profile=f'{workdir}/conan/profiles/ios',
     windows_profile=f'{workdir}/conan/profiles/windows',
+    linux_profile=f'{workdir}/conan/profiles/linux',
     android_project_dir=f'{workdir}/lib/platform/android',
     android_module_dir=f'{workdir}/lib/platform/android/MyDjinniLibrary',
     nupkg_dir=f'{workdir}/lib/platform/windows',
@@ -83,9 +85,9 @@ to avoid compatibility issues!
 This example output from the CLI shows what the configuration options are:
 
 ```
-usage: build.py [-h] [--configuration {release,debug}] [--android [{x86_64,x86,armv8,armv7} ...]] [--aar] [--macos [{armv8,x86_64} ...]] [--iphonesimulator [{armv8,x86_64} ...]]
-                [--iphoneos [{armv8,armv7} ...]] [--xcframework] [--swiftpackage] [--windows [{x86_64,x86,armv8,armv7} ...]] [--nuget] [--build-directory BUILD_DIRECTORY] [--android-ndk ANDROID_NDK]
-                [--java-8-home JAVA_8_HOME] [--java-11-home JAVA_11_HOME] [--conan-create] [--render-docs]
+usage: build.py [-h] [--configuration {release,debug}] [--android [{x86_64,x86,armv8,armv7} ...]] [--macos [{armv8,x86_64} ...]] [--iphonesimulator [{armv8,x86_64} ...]]
+                [--iphoneos [{armv8,armv7} ...]] [--windows [{x86_64,x86,armv8,armv7} ...]] [--linux [{x86_64,x86,armv8,armv7} ...]] [--build-directory BUILD_DIRECTORY] [--android-ndk ANDROID_NDK]
+                [--java-8-home JAVA_8_HOME] [--java-11-home JAVA_11_HOME] [--package [{xcframework,swiftpackage,conan,aar,nuget} ...]] [--render-docs]
 
 Build & package library for different platforms
 
@@ -94,15 +96,13 @@ optional arguments:
   --configuration {release,debug}
   --android [{x86_64,x86,armv8,armv7} ...]
                         list of architectures that the library should be built for android
-  --aar                 wether to package the resulting binaries as AAR for Android
   --macos [{armv8,x86_64} ...]
   --iphonesimulator [{armv8,x86_64} ...]
   --iphoneos [{armv8,armv7} ...]
-  --xcframework         wether to package all macOS/iOS related binaries into an xcframework
-  --swiftpackage        copy resulting xcframework into swiftpackage directory
   --windows [{x86_64,x86,armv8,armv7} ...]
                         list of architectures to build for windows
-  --nuget               wether to package the resulting dlls as nuget for windows
+  --linux [{x86_64,x86,armv8,armv7} ...]
+                        list of architectures to build for linux
   --build-directory BUILD_DIRECTORY
   --android-ndk ANDROID_NDK
                         directory of the NDK installation
@@ -110,7 +110,8 @@ optional arguments:
                         JAVA_HOME for a Java 1.8 installation. Required if building for Android
   --java-11-home JAVA_11_HOME
                         JAVA_HOME for a Java Version > 11. Required if building for Android
-  --conan-create        create the conan package for the given configuration
+  --package [{xcframework,swiftpackage,conan,aar,nuget} ...]
+                        which packages to create. Packages that cannot be created for the selected target architectures will be ignored.
   --render-docs         render doxygen documentation for the languages of the selected target platforms
 
 ```
