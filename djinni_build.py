@@ -601,13 +601,13 @@ class DjinniBuild:
                 architectures=arguments.linux_architectures,
                 configuration=arguments.configuration,
             )
+            linux.install()
             # For creating the conan package, no local build is required.
             # To reduce build time, the local build is only executed if not packaging for conan.
             # So you can choose to either build locally or for conan with --package conan
             if PackageType.conan in arguments.package_types:
                 linux.conan_create_all()
             else:
-                linux.install()
                 linux.build()
 
     def clean(self):
