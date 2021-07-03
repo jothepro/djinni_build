@@ -18,7 +18,7 @@ It supports these platforms:
 - iOS (xcframework, Swiftpackage)
 - macOS (xcframework, Swiftpackage)
 - Windows (NuGet package)
-- Linux (just Conan)
+- Linux (Conan)
 
 The script provides a CLI that allows the user to configure what the output should be.
 
@@ -36,10 +36,6 @@ For every target language, the following steps are executed (if requested by the
 - **Build**: Runs `conan build` for each target architecture & platform
 - **Package**: Executes the platform specific packaging tasks. In some cases the packages will be built outside the
   build directory, but the results will be copied there once finished.
-- **Render documentation**: For each target language a Doxyfile has to be provided in the root of the project
-  (`Doxyfile-Cpp`, `Doxyfile-CppCli`, `Doxyfile-Java`, `Doxyfile-ObjC`). Doxygen will be called for all languages that
-  the build was executed for (e.g.: Android -> Java, iOS -> ObjC, Windows -> C++/CLI). The C++-Documentation will always
-  be created.
 
 
 ## How to use
@@ -83,7 +79,7 @@ djinniBuild.main()
 ```
 
 In it's current state not everything in the script is configurable and heavily relies on conventions.
-This is why it is recommende to strictly stick with the project structure of [jothepro/djinni-library-template](https://github.com/jothepro/djinni-library-template)
+This is why it is recommended to strictly stick with the project structure of [jothepro/djinni-library-template](https://github.com/jothepro/djinni-library-template)
 to avoid compatibility issues!
 
 ## CLI Interface
@@ -110,14 +106,7 @@ optional arguments:
   --linux [{x86_64,x86,armv8,armv7} ...]
                         list of architectures to build for linux
   --build-directory BUILD_DIRECTORY
-  --android-ndk ANDROID_NDK
-                        directory of the NDK installation
-  --java-8-home JAVA_8_HOME
-                        JAVA_HOME for a Java 1.8 installation. Required if building for Android
-  --java-11-home JAVA_11_HOME
-                        JAVA_HOME for a Java Version > 11. Required if building for Android
   --package [{xcframework,swiftpackage,conan,aar,nuget} ...]
                         which packages to create. Packages that cannot be created for the selected target architectures will be ignored.
-  --render-docs         render doxygen documentation for the languages of the selected target platforms
   --clean               clean all build artifacts outside of the build folder, that this script may have created
 ```

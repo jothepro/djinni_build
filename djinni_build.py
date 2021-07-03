@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import glob
 import sys
 from enum import Enum
 from collections import namedtuple
@@ -98,12 +99,6 @@ class BuildContext:
                           settings=all_settings,
                           env=all_env)
 
-    @staticmethod
-    def render_doxygen_docs(doxyfile: str):
-        """calls doxygen with the given Doxyfile."""
-        print_prefixed(f'generating documentation from {doxyfile}:')
-        os.system(f'doxygen {doxyfile}')
-
 
 class AndroidBuildContext(BuildContext):
     """Build context for Android. This defines the logic for packaging all binaries into one AAR"""
@@ -111,8 +106,7 @@ class AndroidBuildContext(BuildContext):
     def __init__(self, conan: Conan, working_directory: str, android_target: str,
                  android_target_dir: str, version: str, build_directory: str, profile: str, architectures: [Architecture],
                  configuration: BuildConfiguration, android_ndk: str, conan_cmake_toolchain_file: str,
-                 android_project_dir: str, android_module_name: str,
-                 java_11_home: str, java_8_home: str):
+                 android_project_dir: str, android_module_name: str):
         super().__init__(
             conan=conan,
             working_directory=working_directory,
@@ -122,9 +116,7 @@ class AndroidBuildContext(BuildContext):
             architectures=architectures,
             configuration=configuration,
             env=[f"CONAN_CMAKE_TOOLCHAIN_FILE={conan_cmake_toolchain_file}",
-                 f"ANDROID_NDK={android_ndk}",
-                 f"JAVA_HOME=\"{java_8_home}\""])
-        self.java_11_home = java_11_home
+                 f"ANDROID_NDK={android_ndk}"])
         self.android_project_dir = android_project_dir
         self.android_module_name = android_module_name
         self.android_target = android_target
@@ -150,7 +142,6 @@ class AndroidBuildContext(BuildContext):
                     dst=f'{self.android_project_dir}/{self.android_module_name}/libs')
         print(f'{print_prefix} build Android Studio Project')
         os.chdir(self.android_project_dir)
-        os.putenv('JAVA_HOME', self.java_11_home)
         ret = os.system(f'./gradlew assemble{self.configuration.value}')
         os.chdir(self.working_directory)
         if ret != 0:
@@ -181,12 +172,6 @@ class AndroidBuildContext(BuildContext):
                 os.remove(shared_lib_file)
             except OSError:
                 pass
-
-
-    @staticmethod
-    def render_doxygen_docs():
-        """renders the doxygen documentation for Java"""
-        BuildContext.render_doxygen_docs('Doxyfile-Java')
 
 
 class DarwinBuildContext(BuildContext):
@@ -313,12 +298,6 @@ class DarwinBuildContext(BuildContext):
             pass
 
 
-    @staticmethod
-    def render_doxygen_docs():
-        """renders the doxygen documentation for Objective-C"""
-        BuildContext.render_doxygen_docs('Doxyfile-ObjC')
-
-
 class WindowsBuildContext(BuildContext):
     """Build context for Windows (.NET 5.0). This defines the logic for packaging the dlls for multiple architectures
     into one NuGet package for distribution."""
@@ -372,14 +351,19 @@ class WindowsBuildContext(BuildContext):
                     fout.write(line.replace('{version}', self.version))
 
     @staticmethod
-    def clean(windows_target: str, nuget_dir: str):
-        print_prefixed(f'Cleaning Windows build artifacts in {windows_target}')
-        lib_dll = f'{nuget_dir}/lib/net5.0/{windows_target}.dll'
-        try:
-            print_prefixed(f'  Removing {lib_dll}')
-            os.remove(lib_dll)
-        except OSError:
-            pass
+    def clean(windows_target: str, nuget_dir: str, nupkg_name: str):
+        print_prefixed(f'Cleaning Windows build artifacts in {nuget_dir}')
+        files = glob.glob(f'{nuget_dir}/{nupkg_name}.*.nupkg')
+        files.append(f'{nuget_dir}/lib/net5.0/{windows_target}.dll')
+        files.append(f'{nuget_dir}/{nupkg_name}.nuspec')
+
+        for file in files:
+            try:
+                print_prefixed(f'  Removing {file}')
+                os.remove(file)
+            except OSError:
+                pass
+
         for architecture in Architecture:
             ijwhost_dll = f'{nuget_dir}/runtimes/{architecture.value.windows}/lib/net5.0/Ijwhost.dll'
             platform_dll = f'{nuget_dir}/runtimes/{architecture.value.windows}/lib/net5.0/{windows_target}.dll'
@@ -393,11 +377,6 @@ class WindowsBuildContext(BuildContext):
                 os.remove(platform_dll)
             except OSError:
                 pass
-
-    @staticmethod
-    def render_doxygen_docs():
-        """renders the doxygen documentation for C++/CLI"""
-        BuildContext.render_doxygen_docs('Doxyfile-CppCli')
 
 class LinuxBuildContext(BuildContext):
     def install(self):
@@ -483,17 +462,10 @@ class DjinniBuild:
                             choices=list(Architecture),
                             help='list of architectures to build for linux')
         parser.add_argument('--build-directory', dest='build_directory', type=str, default="build")
-        parser.add_argument('--android-ndk', dest='android_ndk', type=str, help='directory of the NDK installation')
-        parser.add_argument('--java-8-home', dest='java_8_home', type=str,
-                            help='JAVA_HOME for a Java 1.8 installation. Required if building for Android')
-        parser.add_argument('--java-11-home', dest='java_11_home', type=str,
-                            help='JAVA_HOME for a Java Version > 11. Required if building for Android')
         parser.add_argument('--package', nargs='*', dest='package_types', type=PackageType.from_string,
                             choices=list(PackageType),
                             help='which packages to create. Packages that cannot be created for the selected target '
                                  'architectures will be ignored.')
-        parser.add_argument('--render-docs', action='store_const', const=True, dest='render_docs',
-                            help='render doxygen documentation for the languages of the selected target platforms')
         parser.add_argument('--clean', action='store_const', const=True, dest='cleanup',
                             help='clean all build artifacts outside of the build folder, that this script may have created')
 
@@ -508,16 +480,12 @@ class DjinniBuild:
         if arguments.android_architectures:
             message_template = Template('Missing parameter: `$parameter` is required if building for Android!')
             missing_parameter: bool = False
-            if not arguments.android_ndk:
-                missing_parameter = True
-                print(message_template.substitute(parameter='--android-ndk'), file=sys.stderr)
-            if not arguments.java_8_home:
-                missing_parameter = True
-                print(message_template.substitute(parameter='--java-8-home'), file=sys.stderr)
-            if not arguments.java_11_home and (arguments.package_types and PackageType.aar in arguments.package_types):
-                missing_parameter = True
-                print(message_template.substitute(parameter='--java-11-home'), file=sys.stderr)
-            if missing_parameter:
+
+            android_ndk = ''
+            try:
+                android_ndk = os.environ['ANDROID_NDK_HOME']
+            except KeyError:
+                print('Missing required environment variable ANDROID_NDK_HOME', file=sys.stderr)
                 print()
                 parser.print_help()
                 exit(1)
@@ -532,20 +500,16 @@ class DjinniBuild:
                 profile=self.android_profile,
                 architectures=arguments.android_architectures,
                 configuration=arguments.configuration,
-                android_ndk=arguments.android_ndk,
+                android_ndk=android_ndk,
                 conan_cmake_toolchain_file=f'{os.path.abspath(os.path.dirname(__file__))}/cmake/toolchains/android_toolchain.cmake',
                 android_module_name=self.android_module_name,
-                android_project_dir=self.android_project_dir,
-                java_8_home=arguments.java_8_home,
-                java_11_home=arguments.java_11_home)
+                android_project_dir=self.android_project_dir)
             android.install()
             android.build()
             if arguments.package_types and PackageType.aar in arguments.package_types:
                 android.package()
             if arguments.package_types and PackageType.conan in arguments.package_types:
                 android.conan_create_all()
-            if arguments.render_docs:
-                AndroidBuildContext.render_doxygen_docs()
 
         macos = DarwinBuildContext(
             conan=conan,
@@ -596,12 +560,6 @@ class DjinniBuild:
             if arguments.package_types and PackageType.conan in arguments.package_types:
                 iphone.conan_create_all()
 
-        if arguments.render_docs and (
-                (arguments.macos_architectures is not None) or (
-                arguments.iphonesimulator_architectures is not None) or (
-                        arguments.iphoneos_architectures is not None)):
-            DarwinBuildContext.render_doxygen_docs()
-
         if arguments.package_types and PackageType.xcframework in arguments.package_types:
             DarwinBuildContext.package(build_context_list=[iphonesimulator, iphone, macos],
                                        darwin_target=self.darwin_target,
@@ -632,8 +590,6 @@ class DjinniBuild:
                 windows.package()
             if PackageType.conan in arguments.package_types:
                 windows.conan_create_all()
-            if arguments.render_docs:
-                WindowsBuildContext.render_doxygen_docs()
 
         if arguments.linux_architectures:
             linux = LinuxBuildContext(
@@ -645,15 +601,16 @@ class DjinniBuild:
                 architectures=arguments.linux_architectures,
                 configuration=arguments.configuration,
             )
-            linux.install()
-            linux.build()
+            # For creating the conan package, no local build is required.
+            # To reduce build time, the local build is only executed if not packaging for conan.
+            # So you can choose to either build locally or for conan with --package conan
             if PackageType.conan in arguments.package_types:
                 linux.conan_create_all()
-
-        if arguments.render_docs:
-            BuildContext.render_doxygen_docs('Doxyfile-Cpp')
+            else:
+                linux.install()
+                linux.build()
 
     def clean(self):
         AndroidBuildContext.clean(self.android_target, self.android_project_dir, self.android_module_name)
-        WindowsBuildContext.clean(self.windows_target, self.nupkg_dir)
+        WindowsBuildContext.clean(self.windows_target, self.nupkg_dir, self.nupkg_name)
         DarwinBuildContext.clean(self.darwin_target, self.swiftpackage_dir)
