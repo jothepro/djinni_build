@@ -61,7 +61,12 @@ from djinni_build.djinni_build import DjinniBuild
 workdir = os.getcwd()
 djinniBuild = DjinniBuild(
     working_directory=workdir,
-    target='MyDjinniLibrary',
+    darwin_target='MyDjinniLibrary',
+    darwin_target_dir=f'lib/platform/darwin',
+    windows_target='MyDjinniLibrary',
+    windows_target_dir=f'lib/platform/windows',
+    android_target='MyDjinniLibrary',
+    android_target_dir=f'lib/platform/android',
     version='v1.0.0',
     android_profile=f'{workdir}/conan/profiles/android',
     macos_profile=f'{workdir}/conan/profiles/macos',
@@ -69,8 +74,9 @@ djinniBuild = DjinniBuild(
     windows_profile=f'{workdir}/conan/profiles/windows',
     linux_profile=f'{workdir}/conan/profiles/linux',
     android_project_dir=f'{workdir}/lib/platform/android',
-    android_module_dir=f'{workdir}/lib/platform/android/MyDjinniLibrary',
+    android_module_name=f'MyDjinniLibrary',
     nupkg_dir=f'{workdir}/lib/platform/windows',
+    nupkg_name='MyDjinniLibrary',
     swiftpackage_dir=f'{workdir}/lib/platform/darwin'
 )
 djinniBuild.main()
@@ -87,7 +93,7 @@ This example output from the CLI shows what the configuration options are:
 ```
 usage: build.py [-h] [--configuration {release,debug}] [--android [{x86_64,x86,armv8,armv7} ...]] [--macos [{armv8,x86_64} ...]] [--iphonesimulator [{armv8,x86_64} ...]]
                 [--iphoneos [{armv8,armv7} ...]] [--windows [{x86_64,x86,armv8,armv7} ...]] [--linux [{x86_64,x86,armv8,armv7} ...]] [--build-directory BUILD_DIRECTORY] [--android-ndk ANDROID_NDK]
-                [--java-8-home JAVA_8_HOME] [--java-11-home JAVA_11_HOME] [--package [{xcframework,swiftpackage,conan,aar,nuget} ...]] [--render-docs]
+                [--java-8-home JAVA_8_HOME] [--java-11-home JAVA_11_HOME] [--package [{xcframework,swiftpackage,conan,aar,nuget} ...]] [--render-docs] [--clean]
 
 Build & package library for different platforms
 
@@ -113,5 +119,5 @@ optional arguments:
   --package [{xcframework,swiftpackage,conan,aar,nuget} ...]
                         which packages to create. Packages that cannot be created for the selected target architectures will be ignored.
   --render-docs         render doxygen documentation for the languages of the selected target platforms
-
+  --clean               clean all build artifacts outside of the build folder, that this script may have created
 ```
