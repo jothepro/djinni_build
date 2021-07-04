@@ -59,7 +59,8 @@ class BuildContext:
 
     def __init__(self, conan: Conan, working_directory: str, version: str,
                  build_directory: str, profile: str, architectures: [Architecture],
-                 configuration: BuildConfiguration, env: list[str] = [], settings: list[str] = []):
+                 configuration: BuildConfiguration, conan_user: str, conan_channel: str,
+                 env: list[str] = [], settings: list[str] = []):
         self.conan = conan
         self.working_directory = working_directory
         self.version = version
@@ -67,6 +68,8 @@ class BuildContext:
         self.build_directory = build_directory
         self.architectures = architectures
         self.configuration = configuration
+        self.conan_user = conan_user
+        self.conan_channel = conan_channel
         self.env = ['CONAN_RUN_TESTS=False'] + env
         self.settings = [f'build_type={self.configuration.value}'] + settings
 
@@ -97,6 +100,8 @@ class BuildContext:
         self.conan.create(profile_names=[self.profile],
                           conanfile_path=self.working_directory,
                           settings=all_settings,
+                          user=self.conan_user,
+                          channel=self.conan_channel,
                           env=all_env)
 
 
@@ -105,7 +110,8 @@ class AndroidBuildContext(BuildContext):
 
     def __init__(self, conan: Conan, working_directory: str, android_target: str,
                  android_target_dir: str, version: str, build_directory: str, profile: str, architectures: [Architecture],
-                 configuration: BuildConfiguration, android_ndk: str, conan_cmake_toolchain_file: str,
+                 configuration: BuildConfiguration, conan_user: str, conan_channel: str,
+                 android_ndk: str, conan_cmake_toolchain_file: str,
                  android_project_dir: str, android_module_name: str):
         super().__init__(
             conan=conan,
@@ -115,6 +121,8 @@ class AndroidBuildContext(BuildContext):
             profile=profile,
             architectures=architectures,
             configuration=configuration,
+            conan_user=conan_user,
+            conan_channel=conan_channel,
             env=[f"CONAN_CMAKE_TOOLCHAIN_FILE={conan_cmake_toolchain_file}",
                  f"ANDROID_NDK={android_ndk}"])
         self.android_project_dir = android_project_dir
@@ -179,9 +187,10 @@ class DarwinBuildContext(BuildContext):
 
     def __init__(self, conan: Conan, working_directory: str, darwin_target: str,
                  darwin_target_dir: str, version: str, build_directory: str, profile: str,
-                 architectures: list[Architecture], configuration: BuildConfiguration, sdk: str):
+                 architectures: list[Architecture], configuration: BuildConfiguration, sdk: str,
+                 conan_user: str, conan_channel: str):
         super().__init__(conan, working_directory, version, build_directory, profile, architectures,
-                         configuration)
+                         configuration, conan_user, conan_channel)
         self.sdk = sdk
         self.darwin_target = darwin_target
         self.darwin_target_dir = darwin_target_dir
@@ -304,9 +313,10 @@ class WindowsBuildContext(BuildContext):
 
     def __init__(self, conan: Conan, working_directory: str, windows_target: str,
                  windows_target_dir: str, version: str, build_directory: str, profile: str,
-                 architectures: list[Architecture], configuration: BuildConfiguration, nupkg_dir: str, nupkg_name: str):
+                 architectures: list[Architecture], configuration: BuildConfiguration,
+                 conan_user: str, conan_channel: str, nupkg_dir: str, nupkg_name: str):
         super().__init__(conan, working_directory, version, build_directory, profile, architectures,
-                         configuration)
+                         configuration, conan_user, conan_channel)
         self.nupkg_dir = nupkg_dir
         self.nupkg_name = nupkg_name
         self.windows_target = windows_target
@@ -394,7 +404,7 @@ class DjinniBuild:
                  android_target: str, android_target_dir: str, windows_target: str, windows_target_dir: str,
                  version: str, android_profile: str, macos_profile: str, ios_profile: str,
                  windows_profile: str, linux_profile: str, android_project_dir: str,
-                 android_module_name: str, nupkg_dir: str, nupkg_name: str, swiftpackage_dir: str):
+                 android_module_name: str, nupkg_dir: str, nupkg_name: str, swiftpackage_dir: str, conan_user: str, conan_channel: str):
         """
         :param working_directory:   Absolute path to the root directory of the Djinni project.
         :param darwin_target:       Name of the Darwin specific CMake target
@@ -419,6 +429,8 @@ class DjinniBuild:
                                     directory.
         :param swiftpackage_dir:    Absolute path to the folder that contains the Package.swift file used for the
                                     swift package.
+        :param conan_user:          conan user for package creation
+        :param conan_channel:       conan channel for package creation
         """
         self.working_directory = working_directory
         self.darwin_target: str = darwin_target
@@ -438,6 +450,8 @@ class DjinniBuild:
         self.nupkg_dir = f'{self.working_directory}/{nupkg_dir}'
         self.nupkg_name = nupkg_name
         self.swiftpackage_dir = f'{self.working_directory}/{swiftpackage_dir}'
+        self.conan_user = conan_user
+        self.conan_channel = conan_channel
 
     def main(self):
         """Main entrypoint of build.py. Parses the given CLI parameters & initializes the build contexts for the selected
@@ -500,6 +514,8 @@ class DjinniBuild:
                 profile=self.android_profile,
                 architectures=arguments.android_architectures,
                 configuration=arguments.configuration,
+                conan_user=self.conan_user,
+                conan_channel=self.conan_channel,
                 android_ndk=android_ndk,
                 conan_cmake_toolchain_file=f'{os.path.abspath(os.path.dirname(__file__))}/cmake/toolchains/android_toolchain.cmake',
                 android_module_name=self.android_module_name,
@@ -521,6 +537,8 @@ class DjinniBuild:
             profile=self.macos_profile,
             architectures=arguments.macos_architectures,
             configuration=arguments.configuration,
+            conan_user=self.conan_user,
+            conan_channel=self.conan_channel,
             sdk='macosx')
         iphone = DarwinBuildContext(
             conan=conan,
@@ -532,6 +550,8 @@ class DjinniBuild:
             profile=self.ios_profile,
             architectures=arguments.iphoneos_architectures,
             configuration=arguments.configuration,
+            conan_user=self.conan_user,
+            conan_channel=self.conan_channel,
             sdk='iphoneos')
         iphonesimulator = DarwinBuildContext(
             conan=conan,
@@ -543,6 +563,8 @@ class DjinniBuild:
             profile=self.ios_profile,
             architectures=arguments.iphonesimulator_architectures,
             configuration=arguments.configuration,
+            conan_user=self.conan_user,
+            conan_channel=self.conan_channel,
             sdk='iphonesimulator')
         if arguments.macos_architectures is not None:
             macos.install()
@@ -582,6 +604,8 @@ class DjinniBuild:
                 profile=self.windows_profile,
                 architectures=arguments.windows_architectures,
                 configuration=arguments.configuration,
+                conan_user=self.conan_user,
+                conan_channel=self.conan_channel,
                 nupkg_dir=self.nupkg_dir,
                 nupkg_name=self.nupkg_name)
             windows.install()
@@ -600,6 +624,8 @@ class DjinniBuild:
                 profile=self.linux_profile,
                 architectures=arguments.linux_architectures,
                 configuration=arguments.configuration,
+                conan_user=self.conan_user,
+                conan_channel=self.conan_channel
             )
             linux.install()
             # For creating the conan package, no local build is required.
