@@ -628,13 +628,9 @@ class DjinniBuild:
                 conan_channel=self.conan_channel
             )
             linux.install()
-            # For creating the conan package, no local build is required.
-            # To reduce build time, the local build is only executed if not packaging for conan.
-            # So you can choose to either build locally or for conan with --package conan
+            linux.build()
             if PackageType.conan in arguments.package_types:
                 linux.conan_create_all()
-            else:
-                linux.build()
 
     def clean(self):
         AndroidBuildContext.clean(self.android_target, self.android_project_dir, self.android_module_name)
