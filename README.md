@@ -54,26 +54,25 @@ Import `djinni_build.py` and configure the project structure:
 import os
 from djinni_build.djinni_build import DjinniBuild
 
-workdir = os.getcwd()
 djinniBuild = DjinniBuild(
-    working_directory=workdir,
+    working_directory=os.getcwd(),
     darwin_target='MyDjinniLibrary',
-    darwin_target_dir=f'lib/platform/darwin',
+    darwin_target_dir='lib/platform/darwin',
     windows_target='MyDjinniLibrary',
-    windows_target_dir=f'lib/platform/windows',
+    windows_target_dir='lib/platform/windows',
     android_target='MyDjinniLibrary',
-    android_target_dir=f'lib/platform/android',
+    android_target_dir='lib/platform/android',
     version='v1.0.0',
-    android_profile=f'{workdir}/conan/profiles/android',
-    macos_profile=f'{workdir}/conan/profiles/macos',
-    ios_profile=f'{workdir}/conan/profiles/ios',
-    windows_profile=f'{workdir}/conan/profiles/windows',
-    linux_profile=f'{workdir}/conan/profiles/linux',
-    android_project_dir=f'{workdir}/lib/platform/android',
-    android_module_name=f'MyDjinniLibrary',
-    nupkg_dir=f'{workdir}/lib/platform/windows',
+    android_profile='conan/profiles/android',
+    macos_profile='conan/profiles/macos',
+    ios_profile='conan/profiles/ios',
+    windows_profile='conan/profiles/windows',
+    linux_profile='conan/profiles/linux',
+    android_project_dir='lib/platform/android',
+    android_module_name='MyDjinniLibrary',
+    nupkg_dir='lib/platform/windows',
     nupkg_name='MyDjinniLibrary',
-    swiftpackage_dir=f'{workdir}/lib/platform/darwin'
+    swiftpackage_dir='lib/platform/darwin'
 )
 djinniBuild.main()
 ```

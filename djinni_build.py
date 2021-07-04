@@ -404,16 +404,16 @@ class DjinniBuild:
         :param windows_target:      Name of the Windows specific CMake target
         :param windows_target_dir:  Relative location of the Windows target definition
         :param version:             Version of the library. Will be used to set version metadata in the NuGet package.
-        :param android_profile:     Absolute path to the conan profile that should be used to build for Android.
-        :param macos_profile:       Absolute path to conan profile that should be used to build for macOS.
-        :param ios_profile:         Absolute path to conan profile that should be used to build for iOS.
-        :param windows_profile:     Absolute path to conan profile that should be used to build for Windows.
-        :param android_project_dir: Absolute path to the Android project that is used to build the AAR.
-        :param android_module_dir:  Absolute path to the Android project module that represents the Android Library.
+        :param android_profile:     Relative path to the conan profile that should be used to build for Android.
+        :param macos_profile:       Relative path to conan profile that should be used to build for macOS.
+        :param ios_profile:         Relative path to conan profile that should be used to build for iOS.
+        :param windows_profile:     Relative path to conan profile that should be used to build for Windows.
+        :param android_project_dir: Relative path to the Android project that is used to build the AAR.
+        :param android_module_dir:  Relative path to the Android project module that represents the Android Library.
                                     The Djinni jar will be copied to ./libs inside this directory.
                                     The Djinni native binaries will be copied to ./src/main/jniLibs/<architecture>
                                     inside this directory.
-        :param nupkg_dir:           Absolute path to the folder containing the nuspec template + the NuGet package
+        :param nupkg_dir:           Relative path to the folder containing the nuspec template + the NuGet package
                                     folder structure.
                                     The Djinni library binaries will be copied to ./runtimes/<architecture> inside this
                                     directory.
@@ -428,16 +428,16 @@ class DjinniBuild:
         self.android_target: str = android_target
         self.android_target_dir: str = android_target_dir
         self.version = version
-        self.android_profile = android_profile
-        self.macos_profile = macos_profile
-        self.ios_profile = ios_profile
-        self.windows_profile = windows_profile
-        self.linux_profile = linux_profile
-        self.android_project_dir: str = android_project_dir
+        self.android_profile = f'{self.working_directory}/{android_profile}'
+        self.macos_profile = f'{self.working_directory}/{macos_profile}'
+        self.ios_profile = f'{self.working_directory}/{ios_profile}'
+        self.windows_profile = f'{self.working_directory}/{windows_profile}'
+        self.linux_profile = f'{self.working_directory}/{linux_profile}'
+        self.android_project_dir: str = f'{self.working_directory}/{android_project_dir}'
         self.android_module_name: str = android_module_name
-        self.nupkg_dir = nupkg_dir
+        self.nupkg_dir = f'{self.working_directory}/{nupkg_dir}'
         self.nupkg_name = nupkg_name
-        self.swiftpackage_dir = swiftpackage_dir
+        self.swiftpackage_dir = f'{self.working_directory}/{swiftpackage_dir}'
 
     def main(self):
         """Main entrypoint of build.py. Parses the given CLI parameters & initializes the build contexts for the selected
