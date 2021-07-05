@@ -479,7 +479,7 @@ class DjinniBuild:
         parser.add_argument('--package', nargs='*', dest='package_types', type=PackageType.from_string,
                             choices=list(PackageType),
                             help='which packages to create. Packages that cannot be created for the selected target '
-                                 'architectures will be ignored.')
+                                 'platforms will be ignored.')
         parser.add_argument('--clean', action='store_const', const=True, dest='cleanup',
                             help='clean all build artifacts outside of the build folder, that this script may have created')
 

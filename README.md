@@ -65,7 +65,7 @@ djinniBuild = DjinniBuild(
     windows_target_dir='lib/platform/windows',
     android_target='MyDjinniLibrary',
     android_target_dir='lib/platform/android',
-    version='v1.0.0',
+    version='1.0.0',
     android_profile='conan/profiles/android',
     macos_profile='conan/profiles/macos',
     ios_profile='conan/profiles/ios',
@@ -111,6 +111,6 @@ optional arguments:
                         list of architectures to build for linux
   --build-directory BUILD_DIRECTORY
   --package [{xcframework,swiftpackage,conan,aar,nuget} ...]
-                        which packages to create. Packages that cannot be created for the selected target architectures will be ignored.
+                        which packages to create. Packages that cannot be created for the selected target platforms will be ignored.
   --clean               clean all build artifacts outside of the build folder, that this script may have created
 ```
