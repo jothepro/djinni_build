@@ -419,7 +419,7 @@ class DjinniBuild:
         :param ios_profile:         Relative path to conan profile that should be used to build for iOS.
         :param windows_profile:     Relative path to conan profile that should be used to build for Windows.
         :param android_project_dir: Relative path to the Android project that is used to build the AAR.
-        :param android_module_dir:  Relative path to the Android project module that represents the Android Library.
+        :param android_module_name: Relative path to the Android project module that represents the Android Library.
                                     The Djinni jar will be copied to ./libs inside this directory.
                                     The Djinni native binaries will be copied to ./src/main/jniLibs/<architecture>
                                     inside this directory.

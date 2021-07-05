@@ -1,5 +1,8 @@
 # djinni_build.py 🦎
 
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/jothepro/djinni_build)](https://github.com/jothepro/djinni_build/releases/latest)
+[![GitHub](https://img.shields.io/github/license/jothepro/djinni_build)](https://github.com/jothepro/djinni_build/blob/main/LICENSE)
+
 Script to package and distribute Djinni libraries easily.
 
 ## Requirements
@@ -72,7 +75,9 @@ djinniBuild = DjinniBuild(
     android_module_name='MyDjinniLibrary',
     nupkg_dir='lib/platform/windows',
     nupkg_name='MyDjinniLibrary',
-    swiftpackage_dir='lib/platform/darwin'
+    swiftpackage_dir='lib/platform/darwin',
+    conan_user='jothepro',
+    conan_channel='release'
 )
 djinniBuild.main()
 ```
@@ -87,8 +92,8 @@ This example output from the CLI shows what the configuration options are:
 
 ```
 usage: build.py [-h] [--configuration {release,debug}] [--android [{x86_64,x86,armv8,armv7} ...]] [--macos [{armv8,x86_64} ...]] [--iphonesimulator [{armv8,x86_64} ...]]
-                [--iphoneos [{armv8,armv7} ...]] [--windows [{x86_64,x86,armv8,armv7} ...]] [--linux [{x86_64,x86,armv8,armv7} ...]] [--build-directory BUILD_DIRECTORY] [--android-ndk ANDROID_NDK]
-                [--java-8-home JAVA_8_HOME] [--java-11-home JAVA_11_HOME] [--package [{xcframework,swiftpackage,conan,aar,nuget} ...]] [--render-docs] [--clean]
+                [--iphoneos [{armv8,armv7} ...]] [--windows [{x86_64,x86,armv8,armv7} ...]] [--linux [{x86_64,x86,armv8,armv7} ...]] [--build-directory BUILD_DIRECTORY]
+                [--package [{xcframework,swiftpackage,conan,aar,nuget} ...]] [--clean]
 
 Build & package library for different platforms
 
