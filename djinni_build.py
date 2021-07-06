@@ -463,12 +463,15 @@ class DjinniBuild:
                             choices=list(Architecture),
                             help="list of architectures that the library should be built for android")
         parser.add_argument('--macos', nargs='*', dest='macos_architectures', type=Architecture.from_string,
-                            choices=list([Architecture.armv8, Architecture.x86_64]))
+                            choices=list([Architecture.armv8, Architecture.x86_64]),
+                            help='list of architectures to build for macOS')
         parser.add_argument('--iphonesimulator', nargs='*', dest='iphonesimulator_architectures',
                             type=Architecture.from_string,
-                            choices=list([Architecture.armv8, Architecture.x86_64]))
+                            choices=list([Architecture.armv8, Architecture.x86_64]),
+                            help='list of architectures to build for the iOS Simulator')
         parser.add_argument('--iphoneos', nargs='*', dest='iphoneos_architectures', type=Architecture.from_string,
-                            choices=list([Architecture.armv8, Architecture.armv7]))
+                            choices=list([Architecture.armv8, Architecture.armv7]),
+                            help='list of architectures to build for iOS')
         parser.add_argument('--windows', nargs='*', dest='windows_architectures', type=Architecture.from_string,
                             choices=list(Architecture),
                             help='list of architectures to build for windows')
@@ -492,9 +495,6 @@ class DjinniBuild:
         conan = Conan()
 
         if arguments.android_architectures:
-            message_template = Template('Missing parameter: `$parameter` is required if building for Android!')
-            missing_parameter: bool = False
-
             android_ndk = ''
             try:
                 android_ndk = os.environ['ANDROID_NDK_HOME']

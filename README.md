@@ -29,12 +29,12 @@ The user is able to configure:
 
 - What target platform to build for (Android, iOS, macOS, Windows, Linux)
 - Which architectures to build for (x86, x86_64, armv7, armv8)
-- Wether and how to package the resulting binaries (AAR, NuGet, XCFramework, Swift Package)
-- Wether to build documentation for the library interfaces in each target language (Java, Objective-C, C++/CLI)
+- Wether and how to package the resulting binaries (AAR, NuGet, XCFramework, Swift Package, Conan)
+- Wether to build documentation for the library interfaces in each target language (C++, Java, Objective-C, C++/CLI)
 
-For every target language, the following steps are executed (if requested by the user):
+For every target language, the following steps are executed:
 
-- **Configure Project & Install dependencies**: Runs `conan install` for each target architecture & target platform
+- **Configure Project & Install Dependencies**: Runs `conan install` for each target architecture & target platform
   to configure the CMake project and install all dependencies defined in the Conanfile.
 - **Build**: Runs `conan build` for each target architecture & platform
 - **Package**: Executes the platform specific packaging tasks. In some cases the packages will be built outside the
@@ -103,8 +103,11 @@ optional arguments:
   --android [{x86_64,x86,armv8,armv7} ...]
                         list of architectures that the library should be built for android
   --macos [{armv8,x86_64} ...]
+                        list of architectures to build for macOS
   --iphonesimulator [{armv8,x86_64} ...]
+                        list of architectures to build for the iOS Simulator
   --iphoneos [{armv8,armv7} ...]
+                        list of architectures to build for iOS
   --windows [{x86_64,x86,armv8,armv7} ...]
                         list of architectures to build for windows
   --linux [{x86_64,x86,armv8,armv7} ...]
@@ -113,4 +116,5 @@ optional arguments:
   --package [{xcframework,swiftpackage,conan,aar,nuget} ...]
                         which packages to create. Packages that cannot be created for the selected target platforms will be ignored.
   --clean               clean all build artifacts outside of the build folder, that this script may have created
+
 ```
