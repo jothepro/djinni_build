@@ -610,9 +610,9 @@ class DjinniBuild:
                 nupkg_name=self.nupkg_name)
             windows.install()
             windows.build()
-            if PackageType.nuget in arguments.package_types:
+            if arguments.package_types and PackageType.nuget in arguments.package_types:
                 windows.package()
-            if PackageType.conan in arguments.package_types:
+            if arguments.package_types and PackageType.conan in arguments.package_types:
                 windows.conan_create_all()
 
         if arguments.linux_architectures:
@@ -629,7 +629,7 @@ class DjinniBuild:
             )
             linux.install()
             linux.build()
-            if PackageType.conan in arguments.package_types:
+            if arguments.package_types and PackageType.conan in arguments.package_types:
                 linux.conan_create_all()
 
     def clean(self):
