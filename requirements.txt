@@ -1,2 +1,4 @@
-# Python requirements for executing `build.py`
-conan>=1.36
+twine==3.8.0
+setuptools==61.1.0
+setuptools-git-versioning==1.9.2
+conan>=1.44
