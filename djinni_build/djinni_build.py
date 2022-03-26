@@ -137,7 +137,6 @@ class DjinniBuild:
                                  'created')
 
         arguments = parser.parse_args()
-        arguments.build_directory = arguments.build_directory.resolve()
 
         if arguments.cleanup:
             self.clean()
