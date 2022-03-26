@@ -10,6 +10,7 @@ Utility to package and distribute Djinni libraries easily.
 
 - A project structure close to [jothepro/djinni-library-template](https://github.com/jothepro/djinni-library-template)
 - Should be used together with [jothepro/djinni-cmake](https://github.com/jothepro/djinni-cmake).
+- Python >= 3.10
 
 
 ## What it does

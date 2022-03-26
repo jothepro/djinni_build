@@ -21,6 +21,7 @@ setup(name='djinni_build',
           'Intended Audience :: Developers',
           'License :: OSI Approved :: MIT License',
           'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.10'
       ],
       python_requires='>=3.10',
       install_requires=['conan>=1.44'],
