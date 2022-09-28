@@ -67,8 +67,10 @@ class DarwinBuildContext(BuildContext):
                 shutil.rmtree(lipo_dir)
             lipo_dir.mkdir(parents=True)
             self._lipo_combine(lipo_dir, self.darwin_target, self.darwin_target_dir)
+            self._lipo_combine_dsym(lipo_dir, self.darwin_target, self.darwin_target_dir)
 
     def _lipo_combine(self, lipo_dir: Path, target: str, target_dir: Path):
+        """combines multiple architectures into one multi-architecture framework."""
         shutil.copytree(
             src=self.build_directory / self.architectures[0].value.conan / target_dir / self.target_folder / f'{target}.framework',
             dst=lipo_dir / target_dir / self.target_folder / f'{target}.framework', symlinks=True)
@@ -84,6 +86,21 @@ class DarwinBuildContext(BuildContext):
                 lipo_input.append(self.build_directory / architecture.name / target_dir / self.target_folder / f'{target}.framework' / target)
         os.system(f'lipo {" ".join(str(x) for x in lipo_input)} -create -output {lipo_output}')
 
+    def _lipo_combine_dsym(self, lipo_dir: Path, target: str, target_dir: Path):
+        """combines dSYM information for multiple architectures into one multi-architecture binary, if available"""
+        dsym_src = self.build_directory / self.architectures[0].value.conan / target_dir / self.target_folder / f'{target}.framework.dSYM'
+        if dsym_src.exists():
+            print_prefixed(f'found debug symbols (dSYM). Combining with lipo...')
+            shutil.copytree(
+                src=dsym_src,
+                dst=lipo_dir / target_dir / self.target_folder / f'{target}.framework.dSYM', symlinks=True)
+            lipo_input: list[Path] = []
+            lipo_output: Path = lipo_dir / target_dir / self.target_folder / f'{target}.framework.dSYM' / 'Contents' / 'Resources' / 'DWARF' / target
+            for architecture in self.architectures:
+                lipo_input.append(
+                    self.build_directory / architecture.name / target_dir / self.target_folder / f'{target}.framework.dSYM' / 'Contents' / 'Resources' / 'DWARF' / target)
+            os.system(f'lipo {" ".join(str(x) for x in lipo_input)} -create -output {lipo_output}')
+
     @staticmethod
     def package(build_context_list: [BuildContext], darwin_target: str,
                 darwin_target_dir: Path, build_directory: Path):
@@ -97,7 +114,13 @@ class DarwinBuildContext(BuildContext):
         arguments = f'-output {output_file} '
         for build_context in build_context_list:
             if build_context.architectures is not None:
-                arguments += f"-framework {build_context.build_directory / build_context.combined_architecture / target_dir / build_context.target_folder / target}.framework "
+                framework_base_path = build_context.build_directory / build_context.combined_architecture / target_dir / build_context.target_folder
+                framework_path = framework_base_path / f"{target}.framework"
+                dsym_path = framework_base_path / f"{target}.framework.dSYM"
+                arguments += f"-framework {framework_path} "
+                if dsym_path.exists():
+                    print_prefixed(f'found debug symbols (dSYM). Including them into the xcframework.')
+                    arguments += f"-debug-symbols {dsym_path.resolve()} "
         if output_file.exists():
             shutil.rmtree(output_file)
         os.system(f'xcodebuild -create-xcframework {arguments}')
