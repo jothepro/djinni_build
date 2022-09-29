@@ -50,41 +50,58 @@ class WindowsBuildContext(BuildContext):
         print_prefixed('packaging to NuGet package:')
         nuspec = f'{self.nupkg_name}.nuspec'
         self._copy_target_to_nuget(self.architectures[0], self.windows_target, self.windows_target_dir,
-                                   self.nupkg_dir/'lib'/self.nupkg_net_version)
+                                   self.nupkg_dir / 'ref' / self.nupkg_net_version)
+        pdb_found = False
         for architecture in self.architectures:
             ijwhost_dll = 'Ijwhost.dll'
-            destination = self.nupkg_dir/'runtimes'/architecture.value.windows/'lib'/self.nupkg_net_version
+            destination = self.nupkg_dir / 'runtimes' / architecture.value.windows / 'lib' / self.nupkg_net_version
             self._copy_target_to_nuget(architecture, self.windows_target, self.windows_target_dir, destination)
+            pdb_found = self._copy_pdb_to_nuget(architecture, self.windows_target, self.windows_target_dir, destination)
             shutil.copy(
-                src=self.build_directory/architecture.name/self.windows_target_dir/self.configuration.value/ijwhost_dll,
-                dst=destination/ijwhost_dll)
-        self.configure_nuspec(self.nupkg_dir/nuspec)
+                src=self.build_directory / architecture.name / self.windows_target_dir / str(self.configuration.value) / ijwhost_dll,
+                dst=destination / ijwhost_dll)
+
         os.chdir(self.nupkg_dir)
-        os.system(f'nuget pack {nuspec}')
+        nuget_command = f'nuget pack {nuspec} '
+        if pdb_found:
+            nuget_command += '-Symbols '
+        nuget_command += f'-Properties Configuration={self.configuration.value};version={self.version} '
+        print_prefixed(f'executing: {nuget_command}')
+        os.system(nuget_command)
         os.chdir(self.working_directory)
-        nupkg_file = f'{self.nupkg_name}.{self.version}.nupkg'
-        shutil.copy(src=self.nupkg_dir/nupkg_file,
-                    dst=self.build_directory/nupkg_file)
+        dst_nupkg_file = f'{self.nupkg_name}.{self.version}.nupkg'
+        if pdb_found:
+            src_nupkg_file = f'{self.nupkg_name}.{self.version}.symbols.nupkg'
+        else:
+            src_nupkg_file = dst_nupkg_file
+        shutil.copy(src=self.nupkg_dir / src_nupkg_file, dst=self.build_directory / dst_nupkg_file)
 
     def _copy_target_to_nuget(self, architecture: Architecture, target: str, target_dir: Path, nuget_dir: Path):
+        src_base_dir = self.build_directory / architecture.name / target_dir / str(self.configuration.value)
         target_dll = f'{target}.dll'
-        shutil.copy(
-            src=self.build_directory/architecture.name/target_dir/self.configuration.value/target_dll,
-            dst=nuget_dir/target_dll)
+        shutil.copy(src=src_base_dir / target_dll, dst=nuget_dir / target_dll)
 
-    def configure_nuspec(self, nuspec: Path):
-        """Writes the current version defined in the VERSION file into the nuspec template"""
-        with open(f'{nuspec}.template', 'rt') as fin:
-            with open(nuspec, "wt") as fout:
-                for line in fin:
-                    fout.write(line.replace('{version}', self.version))
+    def _copy_pdb_to_nuget(self, architecture: Architecture, target: str, target_dir: Path, nuget_dir: Path) -> bool:
+        """
+        Tries to copy pdb debugging symbol files if they exist
+
+        :return: True if a pdb was found for the given architecture, else False
+        """
+        target_pdb = f'{target}.pdb'
+        pdb_source = self.build_directory / architecture.name / target_dir / str(self.configuration.value) / target_pdb
+        if pdb_source.exists():
+            print_prefixed(f'found debugging symbols (pdb) for {architecture.name}')
+            shutil.copy(src=pdb_source, dst=nuget_dir / target_pdb)
+            return True
+        else:
+            return False
 
     @staticmethod
     def clean(windows_target: str, nuget_dir: Path, nupkg_net_version: str, nupkg_name: str):
         print_prefixed(f'Cleaning Windows build artifacts in {nuget_dir}')
-        files = glob.glob(str(nuget_dir/f'{nupkg_name}.*.nupkg'))
-        files.append(str(nuget_dir/'lib'/nupkg_net_version/'{windows_target}.dll'))
-        files.append(str(nuget_dir/f'{nupkg_name}.nuspec'))
+        files = glob.glob(str(nuget_dir / f'{nupkg_name}.*.nupkg'))
+        files.append(str(nuget_dir / 'lib' / nupkg_net_version / '{windows_target}.dll'))
+        files.append(str(nuget_dir / f'{nupkg_name}.nuspec'))
 
         for file in files:
             try:
@@ -94,8 +111,8 @@ class WindowsBuildContext(BuildContext):
                 pass
 
         for architecture in Architecture:
-            ijwhost_dll = nuget_dir/'runtimes'/architecture.value.windows/'lib'/nupkg_net_version/'Ijwhost.dll'
-            platform_dll = nuget_dir/'runtimes'/architecture.value.windows/'lib'/nupkg_net_version/f'{windows_target}.dll'
+            ijwhost_dll = nuget_dir / 'runtimes' / architecture.value.windows / 'lib' / nupkg_net_version / 'Ijwhost.dll'
+            platform_dll = nuget_dir / 'runtimes' / architecture.value.windows / 'lib' / nupkg_net_version / f'{windows_target}.dll'
             try:
                 print_prefixed(f'  Removing {ijwhost_dll}')
                 os.remove(ijwhost_dll)
