@@ -11,7 +11,6 @@ import argparse
 class DjinniBuild:
 
     def __init__(self,
-                 version: str,
                  darwin_target: str,
                  android_target: str,
                  android_module_name: str,
@@ -31,11 +30,9 @@ class DjinniBuild:
                  windows_profile: str | Path = Path.cwd()/'conan'/'profiles'/'windows',
                  linux_profile: str | Path = Path.cwd()/'conan'/'profiles'/'linux',
                  nupkg_dir: Path = Path('lib')/'platform'/'windows'/'package',
-                 nupkg_net_version: str = 'net6.0',
                  android_project_dir: Path = Path('lib')/'platform'/'android'/'package',
                  swiftpackage_dir: Path = Path('lib')/'platform'/'darwin'/'package'):
         """
-        :param version:                     Version of the library. Will be used to set version metadata in the NuGet package.
         :param darwin_target:               Name of the Darwin specific CMake target
         :param android_target:              Name of the Android specific CMake target.
         :param android_module_name:         Name of the Android project module that represents the Android Library.
@@ -67,7 +64,6 @@ class DjinniBuild:
                                             folder structure.
                                             The Djinni library binaries will be copied to ./runtimes/<architecture> inside this
                                             directory.
-        :param nupkg_net_version:           .NET version that is used in the nupkg directory.
         :param android_project_dir:         Relative path to the Android project that is used to build the AAR.
         :param swiftpackage_dir:            Relative path to the folder that contains the Package.swift file used for the
                                             swift package.
@@ -82,7 +78,6 @@ class DjinniBuild:
         self.windows_target_dir = windows_target_dir
         self.android_target = android_target
         self.android_target_dir = android_target_dir
-        self.version = version
         self.android_profile = android_profile
         self.macos_profile = macos_profile
         self.ios_profile = ios_profile
@@ -91,7 +86,6 @@ class DjinniBuild:
         self.android_project_dir = android_project_dir
         self.android_module_name = android_module_name
         self.nupkg_dir = nupkg_dir
-        self.nupkg_net_version = nupkg_net_version
         self.nupkg_name = nupkg_name
         self.swiftpackage_dir = swiftpackage_dir
         self.conan_user = conan_user
@@ -132,14 +126,8 @@ class DjinniBuild:
                             choices=list(PackageType),
                             help='which packages to create. Packages that cannot be created for the selected target '
                                  'platforms will be ignored.')
-        parser.add_argument('--clean', action='store_const', const=True, dest='cleanup',
-                            help='clean all build artifacts outside of the build folder, that this script may have '
-                                 'created')
 
         arguments = parser.parse_args()
-
-        if arguments.cleanup:
-            self.clean()
 
         conan = Conan()
 
@@ -149,7 +137,6 @@ class DjinniBuild:
                 working_directory=self.working_directory,
                 android_target=self.android_target,
                 android_target_dir=self.android_target_dir,
-                version=self.version,
                 build_directory=arguments.build_directory/'android',
                 host_profile=self.android_profile,
                 build_profile=arguments.conan_build_profile,
@@ -171,8 +158,7 @@ class DjinniBuild:
             working_directory=self.working_directory,
             darwin_target=self.darwin_target,
             darwin_target_dir=self.darwin_target_dir,
-            version=self.version,
-            build_directory=arguments.build_directory/'macos',
+            build_directory=arguments.build_directory/'darwin',
             host_profile=self.macos_profile,
             build_profile=arguments.conan_build_profile,
             architectures=arguments.macos_architectures,
@@ -185,8 +171,7 @@ class DjinniBuild:
             working_directory=self.working_directory,
             darwin_target=self.darwin_target,
             darwin_target_dir=self.darwin_target_dir,
-            version=self.version,
-            build_directory=arguments.build_directory/'iphone',
+            build_directory=arguments.build_directory/'darwin',
             host_profile=self.ios_profile,
             build_profile=arguments.conan_build_profile,
             architectures=arguments.iphoneos_architectures,
@@ -199,8 +184,7 @@ class DjinniBuild:
             working_directory=self.working_directory,
             darwin_target=self.darwin_target,
             darwin_target_dir=self.darwin_target_dir,
-            version=self.version,
-            build_directory=arguments.build_directory/'iphonesimulator',
+            build_directory=arguments.build_directory/'darwin',
             host_profile=self.ios_profile,
             build_profile=arguments.conan_build_profile,
             architectures=arguments.iphonesimulator_architectures,
@@ -224,7 +208,10 @@ class DjinniBuild:
             if arguments.package_types and PackageType.conan in arguments.package_types:
                 iphone.conan_create_all()
 
-        if arguments.package_types and PackageType.xcframework in arguments.package_types:
+        if arguments.package_types and PackageType.xcframework in arguments.package_types and (
+                        arguments.macos_architectures is not None or
+                        arguments.iphonesimulator_architectures is not None or
+                        arguments.iphoneos_architectures is not None):
             DarwinBuildContext.package(build_context_list=[iphonesimulator, iphone, macos],
                                        darwin_target=self.darwin_target,
                                        darwin_target_dir=self.darwin_target_dir,
@@ -241,7 +228,6 @@ class DjinniBuild:
                 working_directory=self.working_directory,
                 windows_target=self.windows_target,
                 windows_target_dir=self.windows_target_dir,
-                version=self.version,
                 build_directory=arguments.build_directory/'windows',
                 host_profile=self.windows_profile,
                 build_profile=arguments.conan_build_profile,
@@ -250,7 +236,6 @@ class DjinniBuild:
                 conan_user=self.conan_user,
                 conan_channel=self.conan_channel,
                 nupkg_dir=self.nupkg_dir,
-                nupkg_net_version=self.nupkg_net_version,
                 nupkg_name=self.nupkg_name)
             windows.install()
             windows.build()
@@ -263,7 +248,6 @@ class DjinniBuild:
             linux = LinuxBuildContext(
                 conan=conan,
                 working_directory=self.working_directory,
-                version=self.version,
                 build_directory=arguments.build_directory/'linux',
                 host_profile=self.linux_profile,
                 build_profile=arguments.conan_build_profile,
@@ -276,8 +260,3 @@ class DjinniBuild:
             linux.build()
             if arguments.package_types and PackageType.conan in arguments.package_types:
                 linux.conan_create_all()
-
-    def clean(self):
-        AndroidBuildContext.clean(self.android_target, self.android_project_dir, self.android_module_name)
-        WindowsBuildContext.clean(self.windows_target, self.nupkg_dir, self.nupkg_net_version, self.nupkg_name)
-        DarwinBuildContext.clean(self.darwin_target, self.swiftpackage_dir)

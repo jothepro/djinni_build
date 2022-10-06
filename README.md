@@ -38,8 +38,7 @@ For every target language, the following steps are executed:
 - **Configure Project & Install Dependencies**: Runs `conan install` for each target architecture & target platform
   to configure the CMake project and install all dependencies defined in the Conanfile.
 - **Build**: Runs `conan build` for each requested target architecture & platform
-- **Package**: Executes the platform specific packaging tasks. In some cases the packages will be built inside the source 
-  directory, but the results will be copied to the build directory once finished.
+- **Package**: Executes the platform specific packaging tasks.
 
 
 ## How to use
@@ -58,7 +57,6 @@ Then import `DjinniBuild` and configure the project structure and then execute t
 from djinni_build import DjinniBuild
 
 djinniBuild = DjinniBuild(
-  version='1.0.0',
   darwin_target='MyDjinniLibrary',
   windows_target='MyDjinniLibrary',
   android_target='MyDjinniLibrary',
@@ -83,7 +81,7 @@ This example output from the CLI shows what the configuration options for the us
 usage: build.py [-h] [--configuration {release,debug}] [--android [{x86_64,x86,armv8,armv7} ...]] [--macos [{armv8,x86_64} ...]]
                 [--iphonesimulator [{armv8,x86_64} ...]] [--iphoneos [{armv8,armv7} ...]] [--windows [{x86_64,x86,armv8,armv7} ...]]
                 [--linux [{x86_64,x86,armv8,armv7} ...]] [--build-directory BUILD_DIRECTORY] [--build-profile CONAN_BUILD_PROFILE]
-                [--package [{xcframework,swiftpackage,conan,aar,nuget} ...]] [--clean]
+                [--package [{xcframework,swiftpackage,conan,aar,nuget} ...]]
 
 Build & package library for different platforms
 
@@ -106,5 +104,4 @@ options:
   --build-profile CONAN_BUILD_PROFILE
   --package [{xcframework,swiftpackage,conan,aar,nuget} ...]
                         which packages to create. Packages that cannot be created for the selected target platforms will be ignored.
-  --clean               clean all build artifacts outside of the build folder, that this script may have created
 ```

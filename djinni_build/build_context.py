@@ -2,6 +2,8 @@ from .argparse_enums import Architecture, BuildConfiguration
 from conans.client.conan_api import Conan, ProfileData
 from .print_prefixed import print_prefixed
 from pathlib import Path
+import shutil
+import os
 
 class BuildContext:
     """Base class for all build contexts. Contains common code that is shared between builds for different
@@ -9,7 +11,6 @@ class BuildContext:
 
     def __init__(self, conan: Conan,
                  working_directory: Path,
-                 version: str,
                  build_directory: Path,
                  host_profile: str | Path,
                  build_profile: str | Path,
@@ -21,16 +22,17 @@ class BuildContext:
                  settings: list[str] = []):
         self.conan = conan
         self.working_directory = working_directory
-        self.version = version
         self.host_profile = host_profile
         self.build_profile = ProfileData(profiles=[str(build_profile)], settings=[], options=[], env=[], conf=[])
         self.build_directory = build_directory
+        self.packaging_directory = build_directory / 'package'
         self.architectures = architectures
         self.configuration = configuration
         self.conan_user = conan_user
         self.conan_channel = conan_channel
         self.env = ['CONAN_RUN_TESTS=False'] + env
         self.settings = [f'build_type={self.configuration.value}'] + settings
+        self.version = self.conan.inspect(path=str(self.working_directory), attributes=['version'])['version']
 
     def build(self):
         """builds all selected architectures"""
@@ -65,3 +67,32 @@ class BuildContext:
                           user=self.conan_user,
                           channel=self.conan_channel,
                           env=all_env)
+
+    @staticmethod
+    def _copy_directory(src_dir: Path, target_dir: Path, clean: bool = True):
+        print_prefixed(f"Copy directory '{src_dir}' to '{target_dir}'")
+        if target_dir.exists() and clean:
+            shutil.rmtree(target_dir)
+        shutil.copytree(src=src_dir, dst=target_dir, symlinks=True)
+
+    @staticmethod
+    def _copy_file(src: Path, dst: Path):
+        print_prefixed(f"Copy file '{src}' to '{dst}'")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(src, dst)
+
+    @staticmethod
+    def _clean(directory: Path):
+        """deletes the given directory if it exists"""
+        if directory.exists():
+            shutil.rmtree(directory)
+
+    @staticmethod
+    def _execute(command: str, arguments: list[str], working_dir: Path = Path(os.getcwd())) -> int:
+        cwd = os.getcwd()
+        os.chdir(working_dir)
+        full_command = f'{command} {" ".join(arguments)}'
+        print_prefixed(f"Executing command '{full_command}'")
+        result = os.system(full_command)
+        os.chdir(cwd)
+        return result
